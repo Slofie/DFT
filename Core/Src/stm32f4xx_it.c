@@ -60,8 +60,8 @@ bool buffer_full;
 
 /* External variables --------------------------------------------------------*/
 extern HCD_HandleTypeDef hhcd_USB_OTG_FS;
-extern TIM_HandleTypeDef htim2;
 extern TIM_HandleTypeDef htim3;
+extern TIM_HandleTypeDef htim7;
 /* USER CODE BEGIN EV */
 extern ADC_HandleTypeDef hadc1;
 extern float MaxAmplitude[4];
@@ -206,24 +206,6 @@ void SysTick_Handler(void)
 /******************************************************************************/
 
 /**
-  * @brief This function handles TIM2 global interrupt.
-  */
-void TIM2_IRQHandler(void)
-{
-  /* USER CODE BEGIN TIM2_IRQn 0 */
-
-  /* USER CODE END TIM2_IRQn 0 */
-  HAL_TIM_IRQHandler(&htim2);
-  /* USER CODE BEGIN TIM2_IRQn 1 */
-
-  uint8_t message[] = "Hallo vanaf STM32 via RS232!\r\n";
-  HAL_UART_Transmit(&huart2, message, sizeof(message) - 1, HAL_MAX_DELAY);
-
-
-  /* USER CODE END TIM2_IRQn 1 */
-}
-
-/**
   * @brief This function handles TIM3 global interrupt.
   */
 void TIM3_IRQHandler(void)
@@ -250,9 +232,23 @@ void TIM3_IRQHandler(void)
   // Verhoog de index en maak er een circulaire buffer van
   sample_index = (sample_index + 1) % SAMPLE_SIZE;
 
-
-
   /* USER CODE END TIM3_IRQn 1 */
+}
+
+/**
+  * @brief This function handles TIM7 global interrupt.
+  */
+void TIM7_IRQHandler(void)
+{
+  /* USER CODE BEGIN TIM7_IRQn 0 */
+
+  /* USER CODE END TIM7_IRQn 0 */
+  HAL_TIM_IRQHandler(&htim7);
+  /* USER CODE BEGIN TIM7_IRQn 1 */
+  uint8_t message[] = "Hallo vanaf STM32 via RS232!\r\n";
+  HAL_UART_Transmit(&huart2, message, sizeof(message) - 1, HAL_MAX_DELAY);
+
+  /* USER CODE END TIM7_IRQn 1 */
 }
 
 /**
