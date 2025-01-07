@@ -62,7 +62,11 @@ UART_HandleTypeDef huart2;
 extern float samples[];
 extern bool buffer_full;
 
-float MaxAmplitude[4];  			 // slaat de Maximale amplitudes van het bepaalde frequentiebereik op
+int start_freqs[] 	= {100, 200, 300, 400, 500, 600, 700, 800};
+int end_freqs[] 	= {200, 300, 400, 500, 600, 700, 800, 900};
+float max_amplitudes[8];
+
+uint8_t Message[10];
 
 /* USER CODE END PV */
 
@@ -85,51 +89,57 @@ void MX_USB_HOST_Process(void);
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
 
-float compute_dft_max_amplitude(float *samples, int signal_length, float sample_rate, int start_freq, int end_freq) {
+void compute_dft_max_amplitudes(float *samples, int signal_length, float sample_rate, int *start_freqs, int *end_freqs, int num_bands, float *max_amplitudes) {
     HAL_GPIO_WritePin(GPIOD, LD4_Pin, GPIO_PIN_SET);
-    float max_amplitude_squared = 0.0f; // We werken met kwadraten om worteltrekken te vermijden
 
-    // Bereken de DFT-indexen k_start en k_end
-    int k_start = (int)(start_freq * signal_length / sample_rate);
-    int k_end = (int)(end_freq * signal_length / sample_rate);
-
-    // Vooraf berekende constante voor de hoeken
     float two_pi_over_N = 2.0f * M_PI / signal_length;
 
-    for (int k = k_start; k <= k_end; k++) {
-        float real_part = 0.0f;
-        float imag_part = 0.0f;
-        float angle_increment = two_pi_over_N * k;
-        float cos_angle = 1.0f; // cos(0) = 1
-        float sin_angle = 0.0f; // sin(0) = 0
-        float cos_step = cosf(angle_increment);
-        float sin_step = sinf(angle_increment);
+    for (int band = 0; band < num_bands; band++) {
+        int start_freq = start_freqs[band];
+        int end_freq = end_freqs[band];
 
-        for (int n = 0; n < signal_length; n++) {
-            float sample = samples[n];
+        // Bereken DFT-indexen voor deze band
+        int k_start = (int)(start_freq * signal_length / sample_rate);
+        int k_end = (int)(end_freq * signal_length / sample_rate);
 
-            // Bereken real en imaginary met behulp van de huidige hoeken
-            real_part += sample * cos_angle;
-            imag_part += -sample * sin_angle;
+        float max_amplitude_squared = 0.0f;
 
-            // Update hoeken met behulp van rotatiematrix (vermijd herberekenen van cos(n * angle))
-            float new_cos = cos_angle * cos_step - sin_angle * sin_step;
-            float new_sin = cos_angle * sin_step + sin_angle * cos_step;
-            cos_angle = new_cos;
-            sin_angle = new_sin;
+        for (int k = k_start; k <= k_end; k++) {
+            float real_part = 0.0f;
+            float imag_part = 0.0f;
+            float angle_increment = two_pi_over_N * k;
+            float cos_angle = 1.0f; // cos(0)
+            float sin_angle = 0.0f; // sin(0)
+            float cos_step = cosf(angle_increment);
+            float sin_step = sinf(angle_increment);
+
+            for (int n = 0; n < signal_length; n++) {
+                float sample = samples[n];
+
+                // Update real en imaginary
+                real_part += sample * cos_angle;
+                imag_part += -sample * sin_angle;
+
+                // Update hoeken
+                float new_cos = cos_angle * cos_step - sin_angle * sin_step;
+                float new_sin = cos_angle * sin_step + sin_angle * cos_step;
+                cos_angle = new_cos;
+                sin_angle = new_sin;
+            }
+
+            // Bereken amplitude^2
+            float amplitude_squared = (real_part * real_part + imag_part * imag_part) / (signal_length * signal_length);
+
+            // Update maximale amplitude^2
+            if (amplitude_squared > max_amplitude_squared) {
+                max_amplitude_squared = amplitude_squared;
+            }
         }
 
-        // Bereken het kwadraat van de amplitude en schaal met 1/N^2 (i.p.v. sqrt op het einde)
-        float amplitude_squared = (real_part * real_part + imag_part * imag_part) / (signal_length * signal_length);
-
-        // Controleer of dit de grootste amplitude^2 is
-        if (amplitude_squared > max_amplitude_squared) {
-            max_amplitude_squared = amplitude_squared;
-        }
+        max_amplitudes[band] = sqrtf(max_amplitude_squared);
     }
 
     HAL_GPIO_WritePin(GPIOD, LD4_Pin, GPIO_PIN_RESET);
-    return sqrtf(max_amplitude_squared); // Uiteindelijk pas de wortel nemen
 }
 
 
@@ -175,6 +185,7 @@ int main(void)
   MX_TIM7_Init();
   /* USER CODE BEGIN 2 */
   HAL_TIM_Base_Start_IT(&htim3);				// start the interrupt timer 3
+  HAL_TIM_Base_Start_IT(&htim7);				// start the interrupt timer 7
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -185,10 +196,7 @@ int main(void)
 	  if (buffer_full)
 	      {
 	          buffer_full = false;  // Reset de vlag
-	          MaxAmplitude[0] = compute_dft_max_amplitude(samples, SAMPLE_SIZE, SAMPLE_RATE, 100, 200);
-
-	          HAL_DAC_SetValue(&hdac, DAC_CHANNEL_1, DAC_ALIGN_12B_R, MaxAmplitude[0]);	// setvalue on DAC1	PA4
-	          HAL_DAC_Start(&hdac, DAC_CHANNEL_1);							// execute new value
+	          compute_dft_max_amplitudes(samples, SAMPLE_SIZE, SAMPLE_RATE, start_freqs, end_freqs, 8, max_amplitudes);
 
 	      }
 
@@ -533,7 +541,7 @@ static void MX_USART2_UART_Init(void)
 
   /* USER CODE END USART2_Init 1 */
   huart2.Instance = USART2;
-  huart2.Init.BaudRate = 115200;
+  huart2.Init.BaudRate = 9600;
   huart2.Init.WordLength = UART_WORDLENGTH_8B;
   huart2.Init.StopBits = UART_STOPBITS_1;
   huart2.Init.Parity = UART_PARITY_NONE;
