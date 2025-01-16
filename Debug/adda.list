@@ -1578,10 +1578,7 @@ int main(void)
  80011c0:	f44f 7180 	mov.w	r1, #256	@ 0x100
  80011c4:	480b      	ldr	r0, [pc, #44]	@ (80011f4 <main+0x90>)
  80011c6:	f7ff feb7 	bl	8000f38 <compute_dft_max_amplitudes>
-
 	      }
-
-
 
 	HAL_Delay(100);
  80011ca:	2064      	movs	r0, #100	@ 0x64
@@ -3596,8 +3593,8 @@ void TIM7_IRQHandler(void)
   /* USER CODE BEGIN TIM7_IRQn 1 */
 
   //sendFloatAsBytes(123);
-  uint8_t temp = 1; // Numerieke waarde 2
- 8001cd4:	2301      	movs	r3, #1
+  uint8_t temp = 4; // Numerieke waarde 2
+ 8001cd4:	2304      	movs	r3, #4
  8001cd6:	71fb      	strb	r3, [r7, #7]
   HAL_UART_Transmit(&huart2, &temp, 1, HAL_MAX_DELAY);
  8001cd8:	1df9      	adds	r1, r7, #7

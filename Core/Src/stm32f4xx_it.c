@@ -247,7 +247,7 @@ void TIM7_IRQHandler(void)
   /* USER CODE BEGIN TIM7_IRQn 1 */
 
   //sendFloatAsBytes(123);
-  uint8_t temp = 1; // Numerieke waarde 2
+  uint8_t temp = 4; // Numerieke waarde 2
   HAL_UART_Transmit(&huart2, &temp, 1, HAL_MAX_DELAY);
 
   /* USER CODE END TIM7_IRQn 1 */

@@ -65,6 +65,7 @@ extern bool buffer_full;
 int start_freqs[] 	= {100, 200, 300, 400, 500, 600, 700, 800};
 int end_freqs[] 	= {200, 300, 400, 500, 600, 700, 800, 900};
 float max_amplitudes[8];
+uint8_t scaled_amplitudes[8];
 
 uint8_t Message[10];
 
@@ -142,6 +143,31 @@ void compute_dft_max_amplitudes(float *samples, int signal_length, float sample_
     HAL_GPIO_WritePin(GPIOD, LD4_Pin, GPIO_PIN_RESET);
 }
 
+void scale_amplitudes_to_range(float *max_amplitudes, int num_bands, float input_min, float input_max, int output_min, int output_max, uint8_t *scaled_amplitudes) {
+    // Bereken de schaalfactor
+    float input_range = input_max - input_min;
+    float output_range = output_max - output_min;
+
+    // Controleer op een geldige invoerbereik
+    if (input_range <= 0.0f) {
+        for (int i = 0; i < num_bands; i++) {
+            scaled_amplitudes[i] = output_min; // Als het bereik ongeldig is, stel alles in op de minimumwaarde.
+        }
+        return;
+    }
+
+    for (int i = 0; i < num_bands; i++) {
+        // Schaal en beperk de amplitude
+        float normalized = (max_amplitudes[i] - input_min) / input_range;
+        if (normalized < 0.0f) normalized = 0.0f; // Zorg dat de waarde niet onder 0 gaat
+        if (normalized > 1.0f) normalized = 1.0f; // Zorg dat de waarde niet boven 1 gaat
+
+        // Schaal naar het uitvoerbereik
+        scaled_amplitudes[i] = (uint8_t)(normalized * output_range + output_min);
+    }
+}
+
+
 
 
 /* USER CODE END 0 */
@@ -197,10 +223,8 @@ int main(void)
 	      {
 	          buffer_full = false;  // Reset de vlag
 	          compute_dft_max_amplitudes(samples, SAMPLE_SIZE, SAMPLE_RATE, start_freqs, end_freqs, 8, max_amplitudes);
-
+	          scale_amplitudes_to_range(max_amplitudes, 8, 0, 1000, 0, 254, scaled_amplitude);
 	      }
-
-
 
 	HAL_Delay(100);
     /* USER CODE END WHILE */
