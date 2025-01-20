@@ -46,6 +46,7 @@
 float samples[SAMPLE_SIZE];
 int sample_index = 0;
 bool buffer_full;
+uint8_t StartByte = 255;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -64,8 +65,8 @@ extern TIM_HandleTypeDef htim3;
 extern TIM_HandleTypeDef htim7;
 /* USER CODE BEGIN EV */
 extern ADC_HandleTypeDef hadc1;
-extern float MaxAmplitude[4];
 extern UART_HandleTypeDef huart2;
+extern uint8_t scaled_amplitudes[8];
 
 /* USER CODE END EV */
 
@@ -245,10 +246,11 @@ void TIM7_IRQHandler(void)
   /* USER CODE END TIM7_IRQn 0 */
   HAL_TIM_IRQHandler(&htim7);
   /* USER CODE BEGIN TIM7_IRQn 1 */
-
-  //sendFloatAsBytes(123);
-  uint8_t temp = 4; // Numerieke waarde 2
-  HAL_UART_Transmit(&huart2, &temp, 1, HAL_MAX_DELAY);
+  HAL_UART_Transmit(&huart2, &StartByte, 1, HAL_MAX_DELAY);
+  for (int i = 0; i < sizeof(scaled_amplitudes) / sizeof(scaled_amplitudes[0]); i++)
+  {
+	  HAL_UART_Transmit(&huart2, &scaled_amplitudes[i], 1, HAL_MAX_DELAY);
+  }
 
   /* USER CODE END TIM7_IRQn 1 */
 }
