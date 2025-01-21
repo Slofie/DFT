@@ -223,7 +223,7 @@ int main(void)
 	      {
 	          buffer_full = false;  // Reset de vlag
 	          compute_dft_max_amplitudes(samples, SAMPLE_SIZE, SAMPLE_RATE, start_freqs, end_freqs, 8, max_amplitudes);
-	          scale_amplitudes_to_range(max_amplitudes, 8, 0, 1000, 0, 254, scaled_amplitude);
+	          scale_amplitudes_to_range(max_amplitudes, 8, 0, 1000, 0, 254, scaled_amplitudes);
 	      }
 
 	HAL_Delay(100);
