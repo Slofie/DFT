@@ -143,12 +143,14 @@ void compute_dft_max_amplitudes(float *samples, int signal_length, float sample_
     HAL_GPIO_WritePin(GPIOD, LD4_Pin, GPIO_PIN_RESET);
 }
 
-void scale_amplitudes_to_range(float *max_amplitudes, int num_bands, float input_min, float input_max, int output_min, int output_max, uint8_t *scaled_amplitudes) {
+#include <stdint.h>
+
+void scale_amplitudes_with_decay(float *max_amplitudes, int num_bands, float input_min, float input_max, int output_min, int output_max, uint8_t *scaled_amplitudes, float decay_factor) {
     // Bereken de schaalfactor
     float input_range = input_max - input_min;
     float output_range = output_max - output_min;
 
-    // Controleer op een geldige invoerbereik
+    // Controleer op een geldig invoerbereik
     if (input_range <= 0.0f) {
         for (int i = 0; i < num_bands; i++) {
             scaled_amplitudes[i] = output_min; // Als het bereik ongeldig is, stel alles in op de minimumwaarde.
@@ -163,9 +165,19 @@ void scale_amplitudes_to_range(float *max_amplitudes, int num_bands, float input
         if (normalized > 1.0f) normalized = 1.0f; // Zorg dat de waarde niet boven 1 gaat
 
         // Schaal naar het uitvoerbereik
-        scaled_amplitudes[i] = (uint8_t)(normalized * output_range + output_min);
+        uint8_t scaled_value = (uint8_t)(normalized * output_range + output_min);
+
+        // Pas de demping toe op de huidige waarde
+        if (scaled_value < scaled_amplitudes[i]) {
+            // Laat de waarde langzaam dalen met de decay_factor
+            scaled_amplitudes[i] -= (scaled_amplitudes[i] - scaled_value) * decay_factor;
+        } else {
+            // Bij verhoging direct instellen
+            scaled_amplitudes[i] = scaled_value;
+        }
     }
 }
+
 
 
 
@@ -223,7 +235,7 @@ int main(void)
 	      {
 	          buffer_full = false;  // Reset de vlag
 	          compute_dft_max_amplitudes(samples, SAMPLE_SIZE, SAMPLE_RATE, start_freqs, end_freqs, 8, max_amplitudes);
-	          scale_amplitudes_to_range(max_amplitudes, 8, 0, 300, 0, 254, scaled_amplitudes);
+	          scale_amplitudes_with_decay(max_amplitudes, 8, 0, 300, 0, 254, scaled_amplitudes, 0.2);
 	      }
 
 	HAL_Delay(100);
